@@ -14,12 +14,18 @@ namespace argh
         stream_.setstate(other.stream_.rdstate());
     }
 
+    stringstream_proxy& stringstream_proxy::operator=(const stringstream_proxy& other) {
+        if (this != &other) {
+            stream_.str(other.stream_.str());
+            stream_.clear(other.stream_.rdstate());
+        }
+        return *this;
+    }
+
     void stringstream_proxy::setstate(std::ios_base::iostate state) { stream_.setstate(state); }
 
     // Get the string value.
     std::string stringstream_proxy::str() const { return stream_.str(); }
-
-    std::stringbuf* stringstream_proxy::rdbuf() const { return stream_.rdbuf(); }
 
     // Check the state of the stream.
     // False when the most recent stream operation failed
@@ -59,6 +65,9 @@ void parser::parse(int argc, const char* const argv[], int mode /*= PREFER_FLAG_
     flags_.clear();
     params_.clear();
     pos_args_.clear();
+
+    if(argv != nullptr && argc > 1 && argv[argc - 1] == nullptr)
+        argc--;
 
     // convert to strings
     args_.resize(static_cast<decltype(args_)::size_type>(argc));
@@ -208,9 +217,9 @@ bool parser::operator[](std::string const& name) const
 
 //////////////////////////////////////////////////////////////////////////
 
-bool parser::operator[](std::initializer_list<char const* const> init_list) const
+bool parser::operator[](const std::vector<std::string>& init_list) const
 {
-    return std::any_of(init_list.begin(), init_list.end(), [&](char const* const name) { return got_flag(name); });
+    return std::any_of(init_list.begin(), init_list.end(), [&](const std::string& name) { return got_flag(name); });
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -234,7 +243,7 @@ string_stream parser::operator()(std::string const& name) const
 
 //////////////////////////////////////////////////////////////////////////
 
-string_stream parser::operator()(std::initializer_list<char const* const> init_list) const
+string_stream parser::operator()(const std::vector<std::string>& init_list) const
 {
     for (auto& name : init_list)
     {
@@ -264,14 +273,14 @@ void parser::add_param(std::string const& name)
 
 //////////////////////////////////////////////////////////////////////////
 
-void parser::add_param(std::initializer_list<const char *const> init_list)
+void parser::add_param(const std::vector<std::string>& init_list)
 {
     parser::add_params(init_list);
 }
 
 //////////////////////////////////////////////////////////////////////////
 
-void parser::add_params(std::initializer_list<char const* const> init_list)
+void parser::add_params(const std::vector<std::string>& init_list)
 {
     for (auto& name : init_list)
         registeredParams_.insert(trim_leading_dashes(name));

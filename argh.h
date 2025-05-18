@@ -22,6 +22,8 @@ namespace argh
       // Copy constructor.
       stringstream_proxy(const stringstream_proxy& other);
 
+      stringstream_proxy& operator=(const stringstream_proxy& other);
+
       void setstate(std::ios_base::iostate state);
 
       stringstream_proxy& operator>>(bool& value);
@@ -42,8 +44,6 @@ namespace argh
 
       // Get the string value.
       std::string str() const;
-
-      std::stringbuf* rdbuf() const;
 
       // Check the state of the stream.
       // False when the most recent stream operation failed
@@ -68,7 +68,7 @@ namespace argh
    public:
       parser() = default;
 
-      parser(std::initializer_list<char const* const> pre_reg_names)
+      parser(const std::vector<std::string>& pre_reg_names)
       {  add_params(pre_reg_names); }
 
       parser(const char* const argv[], int mode = PREFER_FLAG_FOR_UNREG_OPTION)
@@ -80,8 +80,8 @@ namespace argh
       void add_param(std::string const& name);
       void add_params(std::string const& name);
 
-      void add_param(std::initializer_list<char const* const> init_list);
-      void add_params(std::initializer_list<char const* const> init_list);
+      void add_param(const std::vector<std::string>& init_list);
+      void add_params(const std::vector<std::string>& init_list);
 
       void parse(const char* const argv[], int mode = PREFER_FLAG_FOR_UNREG_OPTION);
       void parse(int argc, const char* const argv[], int mode = PREFER_FLAG_FOR_UNREG_OPTION);
@@ -95,7 +95,7 @@ namespace argh
       bool operator[](std::string const& name) const;
 
       // multiple flag (boolean) accessors: return true if at least one of the flag appeared, otherwise false.
-      bool operator[](std::initializer_list<char const* const> init_list) const;
+      bool operator[](const std::vector<std::string>& init_list) const;
 
       // returns positional arg string by order. Like argv[] but without the options
       std::string const& operator[](size_t ind) const;
@@ -110,7 +110,7 @@ namespace argh
       // accessor for a parameter with multiple names, give a list of names, get an std::istream that can be used to convert to a typed value.
       // call .str() on result to get as string
       // returns the first value in the list to be found.
-      string_stream operator()(std::initializer_list<char const* const> init_list) const;
+      string_stream operator()(const std::vector<std::string>& init_list) const;
 
    private:
       string_stream bad_stream() const;

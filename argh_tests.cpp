@@ -235,13 +235,6 @@ TEST_CASE("Test empty stream") {
   CHECK(!(cmdl("xxxxxx") >> val));
   CHECK(!(cmdl("empty_eq") >> val));
 
-  // access the stream rdbuf available chars to read directly and avoid
-  // unnecessary streaming
-  CHECK(0 < cmdl("answer").rdbuf()->in_avail());
-  CHECK(0 < cmdl("got_eq").rdbuf()->in_avail());
-  CHECK(0 == cmdl("empty_eq").rdbuf()->in_avail());
-  CHECK(0 == cmdl("xxxxxx").rdbuf()->in_avail());
-
   // check the stream state directly
   CHECK(cmdl("got_eq"));
   CHECK(cmdl("answer"));
@@ -348,10 +341,10 @@ TEST_CASE("Test initializer list for flags") {
   int argc = sizeof(argv) / sizeof(argv[0]);
   {
     parser cmdl(argc, argv);
-    CHECK(cmdl[{"a"}]);
-    CHECK(cmdl[{"b"}]);
-    CHECK(!cmdl[{"c"}]);
-    CHECK(!cmdl[{"x"}]);
+    CHECK(cmdl["a"]);
+    CHECK(cmdl["b"]);
+    CHECK(!cmdl["c"]);
+    CHECK(!cmdl["x"]);
 
     CHECK(cmdl[{"a", "1", "moo", "Meow"}]);
     CHECK(!cmdl[{"1", "moo", "Meow"}]);
@@ -375,13 +368,13 @@ TEST_CASE("Test initializer list for params") {
   const char* argv[] = {"-a=1", "-b=2", nullptr};
   parser cmdl(argv);
 
-  CHECK(!cmdl[{"a"}]);  // a and b are params. not flags
-  CHECK(!cmdl[{"b"}]);
-  CHECK(!cmdl[{"c"}]);
+  CHECK(!cmdl["a"]);  // a and b are params. not flags
+  CHECK(!cmdl["b"]);
+  CHECK(!cmdl["c"]);
 
-  CHECK(cmdl({"a"}));
-  CHECK(cmdl({"b"}));
-  CHECK(!cmdl({"c"}));
+  CHECK(cmdl("a"));
+  CHECK(cmdl("b"));
+  CHECK(!cmdl("c"));
 
   CHECK(cmdl({"a", "x", "y"}).str() == "1");
   CHECK(cmdl({"b", "x", "y"}).str() == "2");
@@ -389,13 +382,13 @@ TEST_CASE("Test initializer list for params") {
   CHECK(cmdl({"y", "x", "b"}).str() == "2");
 
   // gets first value
-  CHECK(cmdl({"a", "b"}).str() == "1");
-  CHECK(cmdl({"b", "a"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "b"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "a"}).str() == "2");
 
   // handles empty strings
-  CHECK(!cmdl({""}));
-  CHECK(cmdl({"", "a"}));
-  CHECK(cmdl({"a", ""}));
+  CHECK(!cmdl(""));
+  CHECK(cmdl(std::vector<std::string>{"", "a"}));
+  CHECK(cmdl(std::vector<std::string>{"a", ""}));
 }
 
 TEST_CASE(
@@ -404,13 +397,13 @@ TEST_CASE(
   const char* argv[] = {"-a", "1", "-b", "2", nullptr};
   parser cmdl(argv, argh::PREFER_PARAM_FOR_UNREG_OPTION);
 
-  CHECK(!cmdl[{"a"}]);  // a and b are params. not flags
-  CHECK(!cmdl[{"b"}]);
-  CHECK(!cmdl[{"c"}]);
+  CHECK(!cmdl["a"]);  // a and b are params. not flags
+  CHECK(!cmdl["b"]);
+  CHECK(!cmdl["c"]);
 
-  CHECK(cmdl({"a"}));
-  CHECK(cmdl({"b"}));
-  CHECK(!cmdl({"c"}));
+  CHECK(cmdl("a"));
+  CHECK(cmdl("b"));
+  CHECK(!cmdl("c"));
 
   CHECK(cmdl({"a", "x", "y"}).str() == "1");
   CHECK(cmdl({"b", "x", "y"}).str() == "2");
@@ -418,13 +411,13 @@ TEST_CASE(
   CHECK(cmdl({"y", "x", "b"}).str() == "2");
 
   // gets first value
-  CHECK(cmdl({"a", "b"}).str() == "1");
-  CHECK(cmdl({"b", "a"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "b"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "a"}).str() == "2");
 
   // handles empty strings
-  CHECK(!cmdl({""}));
-  CHECK(cmdl({"", "a"}));
-  CHECK(cmdl({"a", ""}));
+  CHECK(!cmdl(""));
+  CHECK(cmdl(std::vector<std::string>{"", "a"}));
+  CHECK(cmdl(std::vector<std::string>{"a", ""}));
 }
 
 TEST_CASE("Test initializer list for preregistered params") {
@@ -434,13 +427,13 @@ TEST_CASE("Test initializer list for preregistered params") {
   cmdl.add_param("b");
   cmdl.parse(argv);
 
-  CHECK(!cmdl[{"a"}]);  // a and b are params. not flags
-  CHECK(!cmdl[{"b"}]);
-  CHECK(!cmdl[{"c"}]);
+  CHECK(!cmdl["a"]);  // a and b are params. not flags
+  CHECK(!cmdl["b"]);
+  CHECK(!cmdl["c"]);
 
-  CHECK(cmdl({"a"}));
-  CHECK(cmdl({"b"}));
-  CHECK(!cmdl({"c"}));
+  CHECK(cmdl("a"));
+  CHECK(cmdl("b"));
+  CHECK(!cmdl("c"));
 
   CHECK(cmdl({"a", "x", "y"}).str() == "1");
   CHECK(cmdl({"b", "x", "y"}).str() == "2");
@@ -448,42 +441,42 @@ TEST_CASE("Test initializer list for preregistered params") {
   CHECK(cmdl({"y", "x", "b"}).str() == "2");
 
   // gets first value
-  CHECK(cmdl({"a", "b"}).str() == "1");
-  CHECK(cmdl({"b", "a"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "b"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "a"}).str() == "2");
 
   // handles empty strings
-  CHECK(!cmdl({""}));
-  CHECK(cmdl({"", "a"}));
-  CHECK(cmdl({"a", ""}));
+  CHECK(!cmdl(""));
+  CHECK(cmdl(std::vector<std::string>{"", "a"}));
+  CHECK(cmdl(std::vector<std::string>{"a", ""}));
 }
 
 TEST_CASE("Test initializer list add_params() for preregistered params") {
   const char* argv[] = {"-a", "1", "-b", "2", nullptr};
   parser cmdl;
-  cmdl.add_params({"a", "b"});
+  cmdl.add_params(std::vector<std::string>{"a", "b"});
   cmdl.parse(argv);
 
-  CHECK(!cmdl[{"a"}]);  // a and b are params. not flags
-  CHECK(!cmdl[{"b"}]);
-  CHECK(!cmdl[{"c"}]);
+  CHECK(!cmdl["a"]);  // a and b are params. not flags
+  CHECK(!cmdl["b"]);
+  CHECK(!cmdl["c"]);
 
-  CHECK(cmdl({"a"}));
-  CHECK(cmdl({"b"}));
-  CHECK(!cmdl({"c"}));
+  CHECK(cmdl("a"));
+  CHECK(cmdl("b"));
+  CHECK(!cmdl("c"));
 
-  CHECK(cmdl({"a", "x", "y"}).str() == "1");
-  CHECK(cmdl({"b", "x", "y"}).str() == "2");
-  CHECK(cmdl({"x", "a", "y"}).str() == "1");
-  CHECK(cmdl({"y", "x", "b"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "x", "y"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "x", "y"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"x", "a", "y"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"y", "x", "b"}).str() == "2");
 
   // gets first value
-  CHECK(cmdl({"a", "b"}).str() == "1");
-  CHECK(cmdl({"b", "a"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "b"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "a"}).str() == "2");
 
   // handles empty strings
-  CHECK(!cmdl({""}));
-  CHECK(cmdl({"", "a"}));
-  CHECK(cmdl({"a", ""}));
+  CHECK(!cmdl(""));
+  CHECK(cmdl(std::vector<std::string>{"", "a"}));
+  CHECK(cmdl(std::vector<std::string>{"a", ""}));
 }
 
 TEST_CASE("Test initializer list ctor for preregistered params") {
@@ -492,27 +485,27 @@ TEST_CASE("Test initializer list ctor for preregistered params") {
   parser cmdl({"a", "b"});
   cmdl.parse(argv);
 
-  CHECK(!cmdl[{"a"}]);  // a and b are params. not flags
-  CHECK(!cmdl[{"b"}]);
-  CHECK(!cmdl[{"c"}]);
+  CHECK(!cmdl["a"]);  // a and b are params. not flags
+  CHECK(!cmdl["b"]);
+  CHECK(!cmdl["c"]);
 
-  CHECK(cmdl({"a"}));
-  CHECK(cmdl({"b"}));
-  CHECK(!cmdl({"c"}));
+  CHECK(cmdl("a"));
+  CHECK(cmdl("b"));
+  CHECK(!cmdl("c"));
 
-  CHECK(cmdl({"a", "x", "y"}).str() == "1");
-  CHECK(cmdl({"b", "x", "y"}).str() == "2");
-  CHECK(cmdl({"x", "a", "y"}).str() == "1");
-  CHECK(cmdl({"y", "x", "b"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "x", "y"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "x", "y"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"x", "a", "y"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"y", "x", "b"}).str() == "2");
 
   // gets first value
-  CHECK(cmdl({"a", "b"}).str() == "1");
-  CHECK(cmdl({"b", "a"}).str() == "2");
+  CHECK(cmdl(std::vector<std::string>{"a", "b"}).str() == "1");
+  CHECK(cmdl(std::vector<std::string>{"b", "a"}).str() == "2");
 
   // handles empty strings
-  CHECK(!cmdl({""}));
-  CHECK(cmdl({"", "a"}));
-  CHECK(cmdl({"a", ""}));
+  CHECK(!cmdl(""));
+  CHECK(cmdl(std::vector<std::string>{"", "a"}));
+  CHECK(cmdl(std::vector<std::string>{"a", ""}));
 }
 
 TEST_CASE("Test size() member function") {
@@ -531,7 +524,7 @@ TEST_CASE("Test parsing single with add_params") {
   cmdl.add_params("a");
   cmdl.parse(argv);
 
-  CHECK(fixture == cmdl({"a"}).str());
+  CHECK(fixture == cmdl("a").str());
 }
 
 TEST_CASE("Test parsing multiple with add_param") {
@@ -542,5 +535,5 @@ TEST_CASE("Test parsing multiple with add_param") {
   cmdl.parse(argv);
 
   CHECK(cmdl({"a", "b", "c"}));
-  CHECK(fixture == cmdl({"a"}).str());
+  CHECK(fixture == cmdl("a").str());
 }
