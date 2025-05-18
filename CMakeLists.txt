@@ -21,18 +21,20 @@ elseif(MSVC)
 	list(APPEND flags "/W4" "/WX")
 endif()
 
+add_library(argh argh.cpp)
+target_include_directories(argh INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}> $<INSTALL_INTERFACE:include>)
+
 if(BUILD_EXAMPLES)
 	add_executable(argh_example example.cpp)
 	target_compile_options(argh_example PRIVATE ${flags})
+        target_link_libraries(argh_example argh)
 endif()
 if(BUILD_TESTS)
 	add_executable(argh_tests   argh_tests.cpp)
 	target_compile_options(argh_tests PRIVATE ${flags})
 	set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT argh_tests)
+        target_link_libraries(argh_tests argh)
 endif()
-
-add_library(argh INTERFACE)
-target_include_directories(argh INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}> $<INSTALL_INTERFACE:include>)
 
 if(ARGH_MASTER_PROJECT)
 	install(TARGETS argh EXPORT arghTargets)

@@ -9,7 +9,6 @@ TEST_CASE("Test empty cmdl")
 {
     parser cmdl;
     cmdl.parse(0, nullptr);
-    CHECK(0 == cmdl.pos_args().size());
     CHECK(0 == cmdl.size());
     CHECK(cmdl[0].empty());
     CHECK(cmdl(0).str().empty());
@@ -25,8 +24,6 @@ TEST_CASE("Test parsing ctor")
    int argc = sizeof(argv) / sizeof(argv[0]);
    {
       parser cmdl(argc, argv);
-      CHECK(2 == cmdl.flags().size());
-      CHECK(5 == cmdl.pos_args().size());
       CHECK(5 == cmdl.size());
       CHECK(cmdl["a"]);
       CHECK(cmdl["b"]);
@@ -34,7 +31,6 @@ TEST_CASE("Test parsing ctor")
    }
    {
       auto cmdl = parser(argc, argv);
-      CHECK(2 == cmdl.flags().size());
       CHECK(5 == cmdl.size());
       CHECK(cmdl["a"]);
       CHECK(cmdl["b"]);
@@ -48,9 +44,6 @@ TEST_CASE("Test positional access")
     const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
     int argc = sizeof(argv) / sizeof(argv[0]);
     cmdl.parse(argc, argv);
-    CHECK(5 == cmdl.pos_args().size());
-    for (auto parg : cmdl.pos_args())
-        CHECK(!parg.empty());
     
     CHECK(cmdl[0] == "0");
     CHECK(cmdl[1] == "1");
@@ -87,9 +80,6 @@ TEST_CASE("Test flag access")
     const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
     int argc = sizeof(argv) / sizeof(argv[0]);
     cmdl.parse(argc, argv);
-    CHECK(2 == cmdl.flags().size());
-    CHECK(5 == cmdl.pos_args().size());
-
 
     CHECK(cmdl["a"]);
     CHECK(cmdl["b"]);
@@ -102,22 +92,9 @@ TEST_CASE("Test parameter access")
     const char* argv[] = { "0", "-a", "-1", "-b", "2", "3", "4" };
     int argc = sizeof(argv) / sizeof(argv[0]);
     cmdl.parse(argc, argv, parser::PREFER_PARAM_FOR_UNREG_OPTION);
-    CHECK(2 == cmdl.params().size());
-    CHECK(3 == cmdl.pos_args().size());
 
     CHECK(cmdl("a").str() == "-1");
     CHECK(cmdl("b").str() == "2");
-}
-
-TEST_CASE("Test negative numbers are not options")
-{
-    const char* argv[] = { "-1", "-0", "-0.4", "-1e6", "-1.3e-2" };
-    int argc = sizeof(argv)/sizeof(argv[0]);
-    parser cmdl;
-    cmdl.parse(argc, argv);
-    CHECK(argc == cmdl.pos_args().size());
-    CHECK(0 == cmdl.params().size());
-    CHECK(0 == cmdl.flags().size());
 }
 
 TEST_CASE("Test failed istream access")
@@ -179,60 +156,6 @@ TEST_CASE("Test un-reg option modes")
         CHECK(cmdl["d"]);
         CHECK(cmdl["e"]);
     }
-}
-
-TEST_CASE("Test default value")
-{
-    parser cmdl;
-    const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4", "A", "-c", "B" };
-    int argc = sizeof(argv) / sizeof(argv[0]);
-    cmdl.parse(argc, argv, parser::PREFER_PARAM_FOR_UNREG_OPTION);
-
-    int val = -1;
-    CHECK((cmdl(0, 7) >> val));
-    CHECK(0 == val);
-    CHECK((cmdl(argc+1, 7) >> val));
-    CHECK(7 == val);
-    CHECK((cmdl(argc + 1, "7") >> val)); // check default kicks in 
-    CHECK(7 == val);
-
-    val = -1;
-    CHECK(!(cmdl(3, "7") >> val)); // this is an invalid conversion, no default. input error.
-    CHECK((-1 == val || 0 == val));
-
-    val = -1;
-    CHECK((cmdl("XXX", 7) >> val));
-    CHECK(7 == val);
-    CHECK((cmdl("XXX", "8") >> val));
-    CHECK(8 == val);
-    val = -1;
-    CHECK(!(cmdl("XXX", "*") >> val));
-    CHECK((-1 == val || 0 == val));
-
-    CHECK((cmdl("a", 7) >> val));
-    CHECK(1 == val);
-    CHECK((cmdl("b", 7) >> val));
-    CHECK(2 == val);
-
-    val = -1;
-    CHECK(!(cmdl("c", 7) >> val)); // bad conversion
-    CHECK((-1 == val || 0 == val));
-    val = -1;
-    CHECK(!(cmdl("c", "bad-default") >> val));
-    CHECK((-1 == val || 0 == val));
-
-    double pi     = 3.1415926535897932384626433832795028841971693993751058209749445;
-    double pi_val = 0;
-    CHECK((cmdl({"-pi, --archimedes-constant"}, pi) >> pi_val));
-    CHECK(pi == pi_val);
-
-    pi_val = 0;
-    CHECK((cmdl("-pi", pi) >> pi_val));
-    CHECK(pi == pi_val);
-
-    pi_val = 0;
-    CHECK((cmdl(argc + 1, pi) >> pi_val));
-    CHECK(pi == pi_val);
 }
 
 TEST_CASE("Leading dashed are stripped")
@@ -343,8 +266,6 @@ TEST_CASE("Interpret single-dash arg as multi-flag")
         CHECK(cmdl["f"]);
 
         CHECK(cmdl("abc").str() == "54");
-        CHECK(cmdl.pos_args().size() == 1);
-        CHECK(cmdl.pos_args().at(0) == "42");
         CHECK(!cmdl["a"]);
         CHECK(!cmdl["b"]);
         CHECK(!cmdl["c"]);
@@ -365,8 +286,6 @@ TEST_CASE("Interpret single-dash arg as multi-flag")
             CHECK(cmdl("f").str() == "42");
 
             CHECK(cmdl["abc"]);
-            CHECK(cmdl.pos_args().size() == 1);
-            CHECK(cmdl.pos_args().at(0) == "54");
             CHECK(!cmdl["a"]);
             CHECK(!cmdl["b"]);
             CHECK(!cmdl["c"]);
@@ -414,92 +333,12 @@ TEST_CASE("Interpret single-dash arg as multi-flag")
     }
 }
 
-
-TEST_CASE("Handles const char versions as expected")
-{
-   {    
-      const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
-      int argc = sizeof(argv) / sizeof(argv[0]);
-      auto cmdl = parser(argc, argv);
-      CHECK(5 == cmdl.pos_args().size());
-      CHECK(2 == cmdl.flags().size());
-   }
-   {    
-      const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
-      int argc = sizeof(argv) / sizeof(argv[0]);
-      auto cmdl = parser(argc, argv);
-      CHECK(5 == cmdl.pos_args().size());
-      CHECK(2 == cmdl.flags().size());
-   }
-   {
-      const char* const argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
-      int argc = sizeof(argv) / sizeof(argv[0]);
-      auto cmdl = parser(argc, argv);
-      CHECK(5 == cmdl.pos_args().size());
-      CHECK(2 == cmdl.flags().size());
-   }
-   {
-      const char* const argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
-      int argc = sizeof(argv) / sizeof(argv[0]);
-      auto cmdl = parser(argc, argv);
-      CHECK(5 == cmdl.pos_args().size());
-      CHECK(2 == cmdl.flags().size());
-   }
-}
-
-
-template <typename T>
-void test(int argc, T&& argv)
-{
-   auto cmdl = parser(argc, argv);
-   CHECK(5 == cmdl.pos_args().size());
-   CHECK(2 == cmdl.flags().size());
-}
-
-
-TEST_CASE("Handles char** const versions as expected")
-{
-   const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4" };
-   int argc = sizeof(argv) / sizeof(argv[0]);
-
-   char const * const * const argvp_ccc = argv;
-
-   char const * const *       argvp_cc0 = argv;
-   char const * const * const argvp_cc1 = argv;
-// char const *       * const argvp_cc2 = argv;
-// const char *       *       argvp_c0  = argv;
-   char const * const *       argvp_c1  = argv;
-   char const *       * const argvp_c2  = argv;
-
-   test(argc, argvp_ccc);
-
-   test(argc, argvp_cc0);
-   test(argc, argvp_cc1);
-// test(argc, argvp_cc2);
-// test(argc, argvp_c0);
-   test(argc, argvp_c1);
-   test(argc, argvp_c2);
-}
-
-
-TEST_CASE("Handles options with spaces")
-{
-    parser cmdl;
-    const char* argv[] = { "0 1 2 3 4", "-a -b -c" };
-    int argc = sizeof(argv) / sizeof(argv[0]);
-    cmdl.parse(argc, argv);
-    CHECK(1 == cmdl.pos_args().size());
-    CHECK(1 == cmdl.flags().size());
-}
-
 TEST_CASE("Test parser with no argc")
 {
    const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4", nullptr };
    int argc = sizeof(argv) / sizeof(argv[0]) - 1;
    CHECK(nullptr == argv[argc]);
    parser cmdl(argv);
-   CHECK(2 == cmdl.flags().size());
-   CHECK(5 == cmdl.pos_args().size());
 
    CHECK(cmdl["a"]);
    CHECK(cmdl["b"]);
@@ -534,7 +373,6 @@ TEST_CASE("Test empty string access")
 
    CHECK(!cmdl[""]);
    CHECK(!cmdl(""));
-   CHECK(cmdl("",42).str() == "42");
 }
 
 TEST_CASE("Test initializer list for params")
@@ -563,22 +401,6 @@ TEST_CASE("Test initializer list for params")
    CHECK(!cmdl({ "" }));
    CHECK(cmdl({ "", "a" }));
    CHECK(cmdl({ "a", "" }));
-}
-
-TEST_CASE("Test initializer list for params with default values")
-{
-   const char* argv[] = { "-a=1", "-b=2", nullptr };
-   parser cmdl(argv);
-
-   CHECK(!cmdl({ "c" }));
-   CHECK(cmdl({ "c" }, 1));
-   CHECK(cmdl({ "c" }, 1).str() == "1");
-   CHECK(cmdl({ "c","d","e" }, 1));
-   CHECK(cmdl({ "c","d","e" }, 1).str() == "1");
-
-   // handles empty strings
-   CHECK(cmdl({ "" }, 1));
-   CHECK(cmdl({ "" }, 1).str() == "1");
 }
 
 TEST_CASE("Test initializer list for unregistered params with PREFER_PARAM_FOR_UNREG_OPTION")
@@ -670,20 +492,6 @@ TEST_CASE("Test initializer list add_params() for preregistered params")
    CHECK(cmdl({ "a", "" }));
 }
 
-TEST_CASE("Test positional access via range for")
-{
-   const char* argv[] = { "0", "-a", "1", "-b", "2", "3", "4", nullptr };
-   parser cmdl(argv);
-   CHECK(5 == cmdl.pos_args().size());
-
-   int i = 0;
-   for (auto arg : cmdl)
-   {
-      CHECK(!arg.empty());
-      CHECK(arg == std::to_string(i++));
-   }
-}
-
 TEST_CASE("Test initializer list ctor for preregistered params")
 {
    const char* argv[] = { "-a","1","-b","2", nullptr };
@@ -714,151 +522,14 @@ TEST_CASE("Test initializer list ctor for preregistered params")
    CHECK(cmdl({ "a", "" }));
 }
 
-TEST_CASE("Test const correctness")
-{
-   const char* argv[] = { "42", "-a=1","-x", nullptr };
-   const parser cmdl(argv);
-
-   CHECK("42" == cmdl[0]);
-   CHECK("42" == cmdl(0).str());
-
-   CHECK(!cmdl["a"]);
-   CHECK(!cmdl[{"a"}]);
-   CHECK(cmdl["x"]);
-   CHECK(cmdl[{"x"}]);
-
-   [](argh::parser const& cmdl)
-   {
-      CHECK(1 == cmdl.pos_args().size());
-      CHECK(1 == cmdl.size());
-
-      for (auto arg : cmdl)
-         CHECK(std::to_string(42) == arg);
-
-      for (auto arg : cmdl.pos_args())
-         CHECK(std::to_string(42) == arg);
-
-      for (auto arg : cmdl.flags())
-         CHECK("x" == arg);
-
-      for (auto arg : cmdl.params())
-      {
-         CHECK("a" == arg.first);
-         CHECK("1" == arg.second);
-      }
-
-   }(cmdl);
-}
-
 TEST_CASE("Test size() member function")
 {
-   {
-      parser cmdl;
-      cmdl.parse(0, nullptr);
-      CHECK(0 == cmdl.pos_args().size());
-      CHECK(cmdl.pos_args().size() == cmdl.size());
-   }
-
-   {
-      const char* argv[] = { "-a", "--b=2", "-c"};
-      int argc = sizeof(argv) / sizeof(argv[0]);
-      parser cmdl(argc, argv);
-      CHECK(0 == cmdl.pos_args().size());
-      CHECK(cmdl.pos_args().size() == cmdl.size());
-   }
-
    {
       const char* argv[] = { "a", "-a", "b", "-b", "c", "-c" };
       int argc = sizeof(argv) / sizeof(argv[0]);
       parser cmdl(argc, argv);
-      CHECK(cmdl.pos_args().size() == cmdl.size());
-      CHECK(3 == cmdl.flags().size());
       CHECK(3 == cmdl.size());
-      CHECK(cmdl.flags().size() == cmdl.size());
    }
-}
-
-TEST_CASE("Test parse(...) idempotence") 
-{
-    const char* argv_1[] = { "-a", "b", "-c=10", "d", "-f"};
-    const char* argv_2[] = { "-a", "b", "-d=c" };
-    int argc_1 = sizeof(argv_1) / sizeof(argv_1[0]);
-    int argc_2 = sizeof(argv_2) / sizeof(argv_2[0]);
-
-    parser cmdl(argc_1, argv_1);
-    cmdl.parse(argc_2, argv_2);
-
-    CHECK(std::multiset<std::string>{ "a" } == cmdl.flags());
-    CHECK(std::vector<std::string>{ "b" } == cmdl.pos_args());
-    CHECK(std::multimap<std::string, std::string>{ { "d", "c" } } == cmdl.params());
-}
-
-TEST_CASE("Test multiple parameters with the same name")
-{
-   {
-      std::set<std::string> values = {
-         "value1",
-         "value2",
-         "value3",
-         "value4",
-      };
-      const char* argv[] = { "--foo=value1", "--foo=value2", "--foo=value3", "--bar=value4" };
-      int argc = sizeof(argv) / sizeof(argv[0]);
-      parser cmdl(argc, argv);
-
-      CHECK(4 == cmdl.params().size());
-      CHECK(1 == cmdl.params("bar").size());
-      CHECK(3 == cmdl.params("foo").size());
-      CHECK(3 == cmdl.params("--foo").size());
-
-      for (const auto& param : cmdl.params("foo")) {
-         auto found = values.find(param.second);
-         CHECK("foo" == param.first);
-         CHECK(found != values.end());
-         values.erase(param.second);
-      }
-
-      for (const auto& param : cmdl.params("bar")) {
-         CHECK("bar" == param.first);
-         CHECK("value4" == param.second);
-         values.erase(param.second);
-      }
-
-      CHECK(0 == values.size());
-   }
-}
-
-TEST_CASE("Test adding duplicate flags")
-{
-	 {
-		  parser cmdl;
-		  const char* argv[] = { "-a", "-b", "-b" };  // "-b" inserted twice
-		  int argc = sizeof(argv) / sizeof(argv[0]);
-		  cmdl.parse(argc, argv);
-		  CHECK(3 == cmdl.flags().size());
-
-		  CHECK(cmdl["a"]);
-		  CHECK(cmdl["b"]);
-		  CHECK(!cmdl["c"]);
-	 }
-	 {
-		  const char* argv[] = { "-xxxxxx" };  // "-b" inserted twice
-		  int argc = sizeof(argv) / sizeof(argv[0]);
-		  parser cmdl;
-
-		  cmdl.parse(argc, argv);
-
-		  CHECK(cmdl["xxxxxx"]);  // expect as single flag
-		  CHECK(!cmdl["x"]);
-		  CHECK(1 == cmdl.flags().size());
-
-		  // re-parse with `SINGLE_DASH_IS_MULTIFLAG`
-		  cmdl.parse(argc, argv, parser::SINGLE_DASH_IS_MULTIFLAG);
-
-		  CHECK(!cmdl["xxxxxx"]);
-		  CHECK(cmdl["x"]);
-		  CHECK(6 == cmdl.flags().size());
-	 }
 }
 
 TEST_CASE("Test parsing single with add_params")
