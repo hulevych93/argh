@@ -57,15 +57,15 @@ namespace argh
 
    using string_stream = stringstream_proxy;
 
+   enum Mode { PREFER_FLAG_FOR_UNREG_OPTION = 1 << 0,
+               PREFER_PARAM_FOR_UNREG_OPTION = 1 << 1,
+               NO_SPLIT_ON_EQUALSIGN = 1 << 2,
+               SINGLE_DASH_IS_MULTIFLAG = 1 << 3,
+    };
+
    class parser
    {
    public:
-      enum Mode { PREFER_FLAG_FOR_UNREG_OPTION = 1 << 0,
-                  PREFER_PARAM_FOR_UNREG_OPTION = 1 << 1,
-                  NO_SPLIT_ON_EQUALSIGN = 1 << 2,
-                  SINGLE_DASH_IS_MULTIFLAG = 1 << 3,
-                };
-
       parser() = default;
 
       parser(std::initializer_list<char const* const> pre_reg_names)

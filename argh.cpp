@@ -87,7 +87,7 @@ void parser::parse(int argc, const char* const argv[], int mode /*= PREFER_FLAG_
 
         // if the option is unregistered and should be a multi-flag
         if (1 == (args_[i].size() - name.size()) &&         // single dash
-            argh::parser::SINGLE_DASH_IS_MULTIFLAG & mode && // multi-flag mode
+            argh::SINGLE_DASH_IS_MULTIFLAG & mode && // multi-flag mode
             !is_param(name))                                  // unregistered
         {
             std::string keep_param;
@@ -129,10 +129,10 @@ void parser::parse(int argc, const char* const argv[], int mode /*= PREFER_FLAG_
         // PREFER_PARAM_FOR_UNREG_OPTION: a non-registered 'name' is determined a parameter, the next arg
         //                                will be the value of that option.
 
-        assert(!(mode & argh::parser::PREFER_FLAG_FOR_UNREG_OPTION)
-               || !(mode & argh::parser::PREFER_PARAM_FOR_UNREG_OPTION));
+        assert(!(mode & argh::PREFER_FLAG_FOR_UNREG_OPTION)
+               || !(mode & argh::PREFER_PARAM_FOR_UNREG_OPTION));
 
-        bool preferParam = mode & argh::parser::PREFER_PARAM_FOR_UNREG_OPTION;
+        bool preferParam = mode & argh::PREFER_PARAM_FOR_UNREG_OPTION;
 
         if (is_param(name) || preferParam)
         {

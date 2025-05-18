@@ -7,7 +7,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     argh::parser cmdl;
-    cmdl.parse(argc, argv, argh::parser::PREFER_PARAM_FOR_UNREG_OPTION);
+    cmdl.parse(argc, argv, argh::PREFER_PARAM_FOR_UNREG_OPTION);
 
     if (cmdl["-v"])
         cout << "Verbose, I am." << endl;
